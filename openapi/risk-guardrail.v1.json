@@ -1,0 +1,102 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Risk Guardrail API",
+    "version": "0.1.0",
+    "description": "Contract-of-record baseline for the Risk Guardrail System."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "system",
+      "description": "Health and metadata endpoints."
+    },
+    {
+      "name": "ingestion",
+      "description": "Canonical event ingestion endpoints."
+    },
+    {
+      "name": "admin",
+      "description": "Administrative and reporting endpoints."
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service health response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/fills:ingest": {
+      "post": {
+        "tags": ["ingestion"],
+        "summary": "Ingest canonical fill events",
+        "operationId": "ingestFills",
+        "description": "Sprint 0 contract placeholder for the idempotent ingestion flow.",
+        "responses": {
+          "501": {
+            "description": "Not implemented in scaffold"
+          }
+        }
+      }
+    },
+    "/v1/admin/accounts/{accountId}/unlock": {
+      "post": {
+        "tags": ["admin"],
+        "summary": "Unlock an account",
+        "operationId": "unlockAccount",
+        "description": "Sprint 0 contract placeholder for the reason-required unlock flow.",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "Not implemented in scaffold"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "service"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"]
+          },
+          "service": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+import json
+import unittest
+from pathlib import Path
+
+
+SPEC_PATH = Path(__file__).resolve().parents[2] / "openapi" / "risk-guardrail.v1.json"
+
+
+class OpenApiBaselineTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.spec = json.loads(SPEC_PATH.read_text())
+
+    def test_uses_openapi_31(self) -> None:
+        self.assertEqual(self.spec["openapi"], "3.1.0")
+
+    def test_has_core_paths(self) -> None:
+        paths = self.spec["paths"]
+        self.assertIn("/health", paths)
+        self.assertIn("/v1/fills:ingest", paths)
+        self.assertIn("/v1/admin/accounts/{accountId}/unlock", paths)
+
+    def test_health_response_schema_is_present(self) -> None:
+        schema = self.spec["components"]["schemas"]["HealthResponse"]
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(schema["required"], ["status", "service"])
+
+    def test_contract_tracks_system_ingestion_and_admin_tags(self) -> None:
+        tag_names = {tag["name"] for tag in self.spec["tags"]}
+        self.assertTrue({"system", "ingestion", "admin"}.issubset(tag_names))
+
+
+if __name__ == "__main__":
+    unittest.main()
