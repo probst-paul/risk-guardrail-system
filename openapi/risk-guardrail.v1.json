@@ -50,10 +50,17 @@
         "tags": ["ingestion"],
         "summary": "Ingest canonical fill events",
         "operationId": "ingestFills",
-        "description": "Sprint 0 contract placeholder for the idempotent ingestion flow.",
+        "description": "Authenticated ingestion placeholder for canonical fill events.",
+        "security": [{ "bearerAuth": [] }],
         "responses": {
-          "501": {
-            "description": "Not implemented in scaffold"
+          "200": {
+            "description": "Ingestion accepted placeholder response"
+          },
+          "401": {
+            "description": "Missing or invalid authentication token"
+          },
+          "403": {
+            "description": "Tenant scope violation or insufficient permissions"
           }
         }
       }
@@ -63,7 +70,8 @@
         "tags": ["admin"],
         "summary": "Unlock an account",
         "operationId": "unlockAccount",
-        "description": "Sprint 0 contract placeholder for the reason-required unlock flow.",
+        "description": "Authenticated admin placeholder for unlock operations.",
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
             "name": "accountId",
@@ -75,14 +83,27 @@
           }
         ],
         "responses": {
-          "501": {
-            "description": "Not implemented in scaffold"
+          "200": {
+            "description": "Unlock accepted placeholder response"
+          },
+          "401": {
+            "description": "Missing or invalid authentication token"
+          },
+          "403": {
+            "description": "Insufficient role or tenant scope violation"
           }
         }
       }
     }
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {
       "HealthResponse": {
         "type": "object",

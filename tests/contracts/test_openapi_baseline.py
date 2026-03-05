@@ -29,6 +29,20 @@ class OpenApiBaselineTest(unittest.TestCase):
         tag_names = {tag["name"] for tag in self.spec["tags"]}
         self.assertTrue({"system", "ingestion", "admin"}.issubset(tag_names))
 
+    def test_bearer_security_scheme_is_declared(self) -> None:
+        schemes = self.spec["components"]["securitySchemes"]
+        self.assertIn("bearerAuth", schemes)
+        self.assertEqual(schemes["bearerAuth"]["type"], "http")
+        self.assertEqual(schemes["bearerAuth"]["scheme"], "bearer")
+
+    def test_protected_paths_require_bearer_auth(self) -> None:
+        ingest_security = self.spec["paths"]["/v1/fills:ingest"]["post"]["security"]
+        unlock_security = self.spec["paths"]["/v1/admin/accounts/{accountId}/unlock"]["post"][
+            "security"
+        ]
+        self.assertEqual(ingest_security, [{"bearerAuth": []}])
+        self.assertEqual(unlock_security, [{"bearerAuth": []}])
+
 
 if __name__ == "__main__":
     unittest.main()

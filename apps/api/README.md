@@ -8,6 +8,14 @@ This directory contains the FastAPI control-plane backend.
 - Start the local stack from the repo root with `docker compose up --build`
 - Use the root `.env.example` as the baseline local environment
 
+## Auth testing notes
+
+- Protected endpoints currently require a bearer token and enforce tenant/role guards.
+- Request-level security behavior is covered by:
+  - `tests/unit/test_api_security_negative_contract.py`
+  - `tests/unit/test_api_auth_regressions.py`
+- JWT signature verification is intentionally deferred; claim validation and guard behavior are implemented in this sprint.
+
 ## Database migrations
 
 - Apply latest migrations from repo root: `make db-upgrade`
