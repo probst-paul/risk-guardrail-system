@@ -22,6 +22,9 @@ This commit does not implement tenancy, auth, ingestion, risk evaluation, or per
 │   ├── api/
 │   │   ├── app/
 │   │   │   └── connections/
+│   │   ├── migrations/
+│   │   │   └── versions/
+│   │   ├── alembic.ini
 │   │   ├── Dockerfile
 │   │   ├── README.md
 │   │   └── pyproject.toml
@@ -63,6 +66,7 @@ This commit does not implement tenancy, auth, ingestion, risk evaluation, or per
 ```bash
 cp .env.example .env
 make test
+make db-upgrade
 ```
 
 ### Service stubs
@@ -80,6 +84,7 @@ Expected endpoints after the scaffold:
 
 - Use `.env.example` as the local starting point for environment variables.
 - `make test` runs the contract and unit test suites.
+- `make db-upgrade` applies the latest API schema migration set.
 - The API Docker build excludes local caches and test artifacts via `apps/api/.dockerignore`.
 
 ## Roadmap

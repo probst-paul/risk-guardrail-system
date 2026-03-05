@@ -8,6 +8,12 @@ This directory contains the FastAPI control-plane backend.
 - Start the local stack from the repo root with `docker compose up --build`
 - Use the root `.env.example` as the baseline local environment
 
+## Database migrations
+
+- Apply latest migrations from repo root: `make db-upgrade`
+- Roll back one migration from repo root: `make db-downgrade`
+- View migration history from repo root: `make db-history`
+
 Responsibilities:
 
 - expose the versioned backend API
