@@ -15,3 +15,8 @@ The project follows TDD throughout. The current repository state establishes the
 
 - The contract test harness asserts the OpenAPI version and required placeholder paths.
 - The harness should expand over time to check request and response shape against implemented handlers.
+- Persistence-service unit tests currently lock in exception bubbling from repository errors; API-layer translation is handled separately.
+
+## Future direction
+
+- As API error handling matures, persistence failures may move from raw exception bubbling to explicit domain-level error wrapping with dedicated translation tests.
