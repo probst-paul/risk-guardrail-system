@@ -63,3 +63,9 @@ This is a conceptual interface, not a required literal HTTP shape for every plat
 ## Relationship to the simulator
 
 A future simulator should implement this external platform contract as a standalone app. Inside the backend codebase, the simulator belongs as another platform adapter target under the `connections` boundary, not as backend business logic.
+
+## Platform-specific mappings
+
+Use platform-specific docs for concrete field maps and phased scope:
+
+- `docs/platforms/sierra_chart_dtc.md`
