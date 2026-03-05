@@ -2,12 +2,38 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
 
 class JwtValidationError(ValueError):
     """Raised when JWT claims fail baseline validation."""
+
+
+def decode_unverified_claims(token: str) -> Mapping[str, Any]:
+    """Decode JWT payload claims without signature verification.
+
+    This is a scaffold parser for local auth wiring and tests; signature
+    verification is introduced in later hardening commits.
+    """
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise JwtValidationError("malformed token")
+
+    payload_segment = parts[1]
+    padding = "=" * ((4 - len(payload_segment) % 4) % 4)
+    try:
+        payload_bytes = base64.urlsafe_b64decode(payload_segment + padding)
+        payload = json.loads(payload_bytes.decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        raise JwtValidationError("invalid token payload") from exc
+
+    if not isinstance(payload, dict):
+        raise JwtValidationError("token payload must be an object")
+
+    return payload
 
 
 def validate_registered_claims(
