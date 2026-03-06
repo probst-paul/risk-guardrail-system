@@ -70,7 +70,7 @@
         "tags": ["ingestion"],
         "summary": "Ingest canonical account snapshots",
         "operationId": "ingestAccountSnapshots",
-        "description": "Authenticated account snapshot ingestion with duplicate-safe counting.",
+        "description": "Authenticated account snapshot ingestion with duplicate-safe counting. Current scaffold uses process-local in-memory duplicate tracking.",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {

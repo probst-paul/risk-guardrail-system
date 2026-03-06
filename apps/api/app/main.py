@@ -25,6 +25,16 @@ app = FastAPI(
     description="Sprint 0 scaffold for the Risk Guardrail System backend.",
 )
 
+_account_snapshot_repository = InMemoryAccountSnapshotRepository()
+_account_snapshot_persistence_service = AccountSnapshotPersistenceService(
+    _account_snapshot_repository
+)
+
+
+def reset_account_snapshot_persistence_state() -> None:
+    """Reset in-memory snapshot persistence state (test helper)."""
+    _account_snapshot_repository.clear()
+
 
 @app.get("/health", tags=["system"])
 def health() -> dict[str, str]:
@@ -90,10 +100,9 @@ def ingest_account_snapshots(
             ) from None
         canonical_snapshots.append(snapshot)
 
-    persistence_service = AccountSnapshotPersistenceService(
-        InMemoryAccountSnapshotRepository()
+    persistence_result = _account_snapshot_persistence_service.persist_batch(
+        canonical_snapshots
     )
-    persistence_result = persistence_service.persist_batch(canonical_snapshots)
 
     return {
         "status": "accepted",

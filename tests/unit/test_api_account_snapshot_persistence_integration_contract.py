@@ -2,7 +2,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import app, reset_account_snapshot_persistence_state
 from tests.helpers.auth_tokens import encode_test_token
 
 
@@ -20,11 +20,11 @@ def _service_principal_token(tenant_id: str = "tenant-a") -> str:
     return encode_test_token(claims)
 
 
-def _snapshot(event_ts: str) -> dict:
+def _snapshot(event_ts: str, source_account_id: str = "acct-1001") -> dict:
     return {
         "tenant_id": "tenant-a",
         "connector_id": "sierra-chart-primary",
-        "source_account_id": "acct-1001",
+        "source_account_id": source_account_id,
         "event_ts": event_ts,
         "current_balance": "103500.25",
         "daily_pnl": "350.25",
@@ -35,6 +35,7 @@ def _snapshot(event_ts: str) -> dict:
 
 class ApiAccountSnapshotPersistenceIntegrationContractTest(unittest.TestCase):
     def setUp(self) -> None:
+        reset_account_snapshot_persistence_state()
         self.client = TestClient(app)
         self.path = "/v1/accounts:snapshot"
         self.headers = {
@@ -43,7 +44,7 @@ class ApiAccountSnapshotPersistenceIntegrationContractTest(unittest.TestCase):
         }
 
     def test_snapshot_ingest_returns_persistence_counts(self) -> None:
-        payload = {"snapshots": [_snapshot("2026-03-05T14:32:10Z")]}
+        payload = {"snapshots": [_snapshot("2026-03-05T14:32:10Z", source_account_id="acct-a")]}
         response = self.client.post(self.path, json=payload, headers=self.headers)
 
         self.assertEqual(response.status_code, 200)
@@ -58,7 +59,7 @@ class ApiAccountSnapshotPersistenceIntegrationContractTest(unittest.TestCase):
             "snapshots": [
                 _snapshot("2026-03-05T14:32:10Z"),
                 _snapshot("2026-03-05T14:32:10Z"),
-                _snapshot("2026-03-05T14:33:10Z"),
+                _snapshot("2026-03-05T14:33:10Z", source_account_id="acct-b"),
             ]
         }
         response = self.client.post(self.path, json=payload, headers=self.headers)
@@ -68,6 +69,23 @@ class ApiAccountSnapshotPersistenceIntegrationContractTest(unittest.TestCase):
         self.assertEqual(body["total_count"], 3)
         self.assertEqual(body["persisted_count"], 2)
         self.assertEqual(body["duplicate_count"], 1)
+
+    def test_snapshot_ingest_tracks_duplicates_across_requests(self) -> None:
+        payload = {"snapshots": [_snapshot("2026-03-05T15:00:00Z", source_account_id="acct-c")]}
+
+        first = self.client.post(self.path, json=payload, headers=self.headers)
+        second = self.client.post(self.path, json=payload, headers=self.headers)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+
+        first_body = first.json()
+        second_body = second.json()
+
+        self.assertEqual(first_body["persisted_count"], 1)
+        self.assertEqual(first_body["duplicate_count"], 0)
+        self.assertEqual(second_body["persisted_count"], 0)
+        self.assertEqual(second_body["duplicate_count"], 1)
 
 
 if __name__ == "__main__":

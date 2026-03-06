@@ -66,3 +66,7 @@ class InMemoryAccountSnapshotRepository:
             return False
         self._seen_keys.add(key)
         return True
+
+    def clear(self) -> None:
+        """Clear persisted keys (useful for test isolation)."""
+        self._seen_keys.clear()
