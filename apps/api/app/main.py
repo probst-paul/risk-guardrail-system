@@ -1,5 +1,6 @@
 """FastAPI entrypoint for the Risk Guardrail backend service."""
 
+import os
 from typing import Dict, Union
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -18,6 +19,7 @@ from app.ingestion.persistence import (
     AccountSnapshotPersistenceService,
     InMemoryAccountSnapshotRepository,
 )
+from app.ingestion.postgres_repository import PostgresAccountSnapshotRepository
 
 app = FastAPI(
     title="Risk Guardrail API",
@@ -34,6 +36,32 @@ _account_snapshot_persistence_service = AccountSnapshotPersistenceService(
 def reset_account_snapshot_persistence_state() -> None:
     """Reset in-memory snapshot persistence state (test helper)."""
     _account_snapshot_repository.clear()
+
+
+def get_db_connection():
+    """Return a PostgreSQL connection when runtime configuration supports it."""
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        return None
+
+    try:
+        import psycopg  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+
+    try:
+        return psycopg.connect(database_url)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_snapshot_persistence_service() -> AccountSnapshotPersistenceService:
+    connection = get_db_connection()
+    if connection and hasattr(connection, "cursor") and hasattr(connection, "commit"):
+        return AccountSnapshotPersistenceService(
+            PostgresAccountSnapshotRepository(connection)
+        )
+    return _account_snapshot_persistence_service
 
 
 @app.get("/health", tags=["system"])
@@ -100,9 +128,8 @@ def ingest_account_snapshots(
             ) from None
         canonical_snapshots.append(snapshot)
 
-    persistence_result = _account_snapshot_persistence_service.persist_batch(
-        canonical_snapshots
-    )
+    persistence_service = _build_snapshot_persistence_service()
+    persistence_result = persistence_service.persist_batch(canonical_snapshots)
 
     return {
         "status": "accepted",

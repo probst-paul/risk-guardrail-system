@@ -70,7 +70,7 @@
         "tags": ["ingestion"],
         "summary": "Ingest canonical account snapshots",
         "operationId": "ingestAccountSnapshots",
-        "description": "Authenticated account snapshot ingestion with duplicate-safe counting. Current scaffold uses process-local in-memory duplicate tracking.",
+        "description": "Authenticated account snapshot ingestion with duplicate-safe counting. Current runtime attempts PostgreSQL persistence and falls back to process-local in-memory tracking when DB connection is unavailable.",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {

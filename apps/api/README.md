@@ -23,10 +23,10 @@ This directory contains the FastAPI control-plane backend.
 
 - `POST /v1/accounts:snapshot` accepts authenticated service-principal payloads.
 - Response includes `total_count`, `persisted_count`, and `duplicate_count`.
-- Duplicate accounting is currently backed by a shared in-memory repository adapter:
+- Snapshot ingestion now attempts PostgreSQL-backed persistence wiring via runtime DB connection.
+- When DB connection is unavailable, ingestion falls back to the shared in-memory repository adapter:
   - duplicate detection works across requests while the API process is running
   - duplicate history resets on process restart
-- Persistence will move to PostgreSQL-backed storage in a later commit.
 
 ## Database migrations
 
