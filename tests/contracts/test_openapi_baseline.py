@@ -18,6 +18,7 @@ class OpenApiBaselineTest(unittest.TestCase):
         paths = self.spec["paths"]
         self.assertIn("/health", paths)
         self.assertIn("/v1/fills:ingest", paths)
+        self.assertIn("/v1/accounts:snapshot", paths)
         self.assertIn("/v1/admin/accounts/{accountId}/unlock", paths)
 
     def test_health_response_schema_is_present(self) -> None:
@@ -37,11 +38,28 @@ class OpenApiBaselineTest(unittest.TestCase):
 
     def test_protected_paths_require_bearer_auth(self) -> None:
         ingest_security = self.spec["paths"]["/v1/fills:ingest"]["post"]["security"]
+        snapshot_security = self.spec["paths"]["/v1/accounts:snapshot"]["post"]["security"]
         unlock_security = self.spec["paths"]["/v1/admin/accounts/{accountId}/unlock"]["post"][
             "security"
         ]
         self.assertEqual(ingest_security, [{"bearerAuth": []}])
+        self.assertEqual(snapshot_security, [{"bearerAuth": []}])
         self.assertEqual(unlock_security, [{"bearerAuth": []}])
+
+    def test_account_snapshot_ingest_response_schema_is_present(self) -> None:
+        schema = self.spec["components"]["schemas"]["AccountSnapshotIngestResponse"]
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(
+            schema["required"],
+            [
+                "status",
+                "tenant_id",
+                "accepted_count",
+                "total_count",
+                "persisted_count",
+                "duplicate_count",
+            ],
+        )
 
 
 if __name__ == "__main__":

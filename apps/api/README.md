@@ -14,7 +14,16 @@ This directory contains the FastAPI control-plane backend.
 - Request-level security behavior is covered by:
   - `tests/unit/test_api_security_negative_contract.py`
   - `tests/unit/test_api_auth_regressions.py`
+- Account snapshot ingestion behavior is covered by:
+  - `tests/unit/test_api_account_snapshot_ingest_contract.py`
+  - `tests/unit/test_api_account_snapshot_persistence_integration_contract.py`
 - JWT signature verification is intentionally deferred; claim validation and guard behavior are implemented in this sprint.
+
+## Ingestion semantics (current scaffold)
+
+- `POST /v1/accounts:snapshot` accepts authenticated service-principal payloads.
+- Response includes `total_count`, `persisted_count`, and `duplicate_count`.
+- Duplicate accounting is currently backed by an in-memory repository adapter and will move to PostgreSQL-backed persistence in a later commit.
 
 ## Database migrations
 

@@ -14,6 +14,10 @@ from app.ingestion.account_models import (
     CanonicalAccountValidationError,
     canonical_account_snapshot_from_dict,
 )
+from app.ingestion.persistence import (
+    AccountSnapshotPersistenceService,
+    InMemoryAccountSnapshotRepository,
+)
 
 app = FastAPI(
     title="Risk Guardrail API",
@@ -64,7 +68,7 @@ def ingest_account_snapshots(
             detail="invalid_payload",
         )
 
-    accepted_count = 0
+    canonical_snapshots = []
     for raw_snapshot in snapshots:
         if not isinstance(raw_snapshot, dict):
             raise HTTPException(
@@ -84,10 +88,18 @@ def ingest_account_snapshots(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="forbidden",
             ) from None
-        accepted_count += 1
+        canonical_snapshots.append(snapshot)
+
+    persistence_service = AccountSnapshotPersistenceService(
+        InMemoryAccountSnapshotRepository()
+    )
+    persistence_result = persistence_service.persist_batch(canonical_snapshots)
 
     return {
         "status": "accepted",
         "tenant_id": auth.effective_tenant_id,
-        "accepted_count": accepted_count,
+        "accepted_count": persistence_result.total_count,
+        "total_count": persistence_result.total_count,
+        "persisted_count": persistence_result.persisted_count,
+        "duplicate_count": persistence_result.duplicate_count,
     }

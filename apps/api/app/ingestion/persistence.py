@@ -48,3 +48,21 @@ class AccountSnapshotPersistenceService:
             duplicate_count=duplicate_count,
         )
 
+
+class InMemoryAccountSnapshotRepository:
+    """In-memory repository useful for scaffold wiring and tests."""
+
+    def __init__(self) -> None:
+        self._seen_keys: set[tuple[str, str, str, str]] = set()
+
+    def insert_snapshot_if_new(self, snapshot: CanonicalAccountSnapshot) -> bool:
+        key = (
+            snapshot.tenant_id,
+            snapshot.connector_id,
+            snapshot.source_account_id,
+            snapshot.event_ts,
+        )
+        if key in self._seen_keys:
+            return False
+        self._seen_keys.add(key)
+        return True
