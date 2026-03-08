@@ -70,7 +70,7 @@
         "tags": ["ingestion"],
         "summary": "Ingest canonical account snapshots",
         "operationId": "ingestAccountSnapshots",
-        "description": "Authenticated account snapshot ingestion with duplicate-safe counting. Current runtime attempts PostgreSQL persistence and falls back to process-local in-memory tracking when DB connection is unavailable.",
+        "description": "Authenticated account snapshot ingestion with duplicate-safe counting using PostgreSQL-backed persistence.",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {
@@ -91,6 +91,9 @@
           },
           "403": {
             "description": "Tenant scope violation or insufficient permissions"
+          },
+          "503": {
+            "description": "Persistence unavailable: PostgreSQL connection or repository wiring not available"
           }
         }
       }

@@ -11,7 +11,12 @@ def main() -> None:
     """Fail fast when core scaffold endpoints are missing from the contract."""
     spec = json.loads(SPEC_PATH.read_text())
 
-    required_paths = ["/health", "/v1/fills:ingest", "/v1/admin/accounts/{accountId}/unlock"]
+    required_paths = [
+        "/health",
+        "/v1/fills:ingest",
+        "/v1/accounts:snapshot",
+        "/v1/admin/accounts/{accountId}/unlock",
+    ]
     missing = [path for path in required_paths if path not in spec.get("paths", {})]
     if missing:
         raise SystemExit(f"Missing required OpenAPI paths: {', '.join(missing)}")

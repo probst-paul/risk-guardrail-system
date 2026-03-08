@@ -61,6 +61,11 @@ class OpenApiBaselineTest(unittest.TestCase):
             ],
         )
 
+    def test_account_snapshot_ingest_declares_persistence_unavailable_response(self) -> None:
+        responses = self.spec["paths"]["/v1/accounts:snapshot"]["post"]["responses"]
+        self.assertIn("503", responses)
+        self.assertIn("persistence", responses["503"]["description"].lower())
+
 
 if __name__ == "__main__":
     unittest.main()
