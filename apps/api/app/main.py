@@ -61,7 +61,7 @@ def _build_snapshot_persistence_service() -> AccountSnapshotPersistenceService:
         return AccountSnapshotPersistenceService(
             PostgresAccountSnapshotRepository(connection)
         )
-    return _account_snapshot_persistence_service
+    raise RuntimeError("persistence_unavailable")
 
 
 @app.get("/health", tags=["system"])
@@ -128,7 +128,13 @@ def ingest_account_snapshots(
             ) from None
         canonical_snapshots.append(snapshot)
 
-    persistence_service = _build_snapshot_persistence_service()
+    try:
+        persistence_service = _build_snapshot_persistence_service()
+    except RuntimeError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="persistence_unavailable",
+        ) from None
     persistence_result = persistence_service.persist_batch(canonical_snapshots)
 
     return {

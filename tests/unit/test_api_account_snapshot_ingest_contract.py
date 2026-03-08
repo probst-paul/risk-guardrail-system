@@ -1,8 +1,13 @@
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.ingestion.persistence import (
+    AccountSnapshotPersistenceService,
+    InMemoryAccountSnapshotRepository,
+)
 from tests.helpers.auth_tokens import encode_test_token
 
 
@@ -61,11 +66,14 @@ class ApiAccountSnapshotIngestContractTest(unittest.TestCase):
 
     def test_snapshot_ingest_accepts_valid_authenticated_payload(self) -> None:
         token = _service_principal_token(tenant_id="tenant-a")
-        response = self.client.post(
-            self.path,
-            json=_valid_snapshot_payload(),
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        )
+        repository = InMemoryAccountSnapshotRepository()
+        service = AccountSnapshotPersistenceService(repository)
+        with patch("app.main._build_snapshot_persistence_service", return_value=service):
+            response = self.client.post(
+                self.path,
+                json=_valid_snapshot_payload(),
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            )
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(body["status"], "accepted")

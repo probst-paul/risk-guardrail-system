@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -38,7 +38,7 @@ def _snapshot_payload() -> dict:
     }
 
 
-class ApiSnapshotPostgresWiringContractTest(unittest.TestCase):
+class ApiSnapshotPersistenceAvailabilityContractTest(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
         self.path = "/v1/accounts:snapshot"
@@ -47,43 +47,31 @@ class ApiSnapshotPostgresWiringContractTest(unittest.TestCase):
             "Content-Type": "application/json",
         }
 
-    @patch("app.main.get_db_connection")
-    def test_snapshot_ingest_uses_db_connection_factory(self, get_db_connection) -> None:  # noqa: ANN001
-        class _FakeCursor:
-            def __init__(self) -> None:
-                self.rowcount = 1
-
-            def execute(self, _sql, _params) -> None:  # noqa: ANN001
-                return None
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
-                return False
-
-        class _FakeConnection:
-            def __init__(self) -> None:
-                self._cursor = _FakeCursor()
-
-            def cursor(self):
-                return self._cursor
-
-            def commit(self) -> None:
-                return None
-
-        fake_connection = _FakeConnection()
-        get_db_connection.return_value = fake_connection
-
+    @patch("app.main.get_db_connection", return_value=None)
+    def test_snapshot_ingest_returns_503_when_db_connection_unavailable(
+        self, _get_db_connection  # noqa: ANN001
+    ) -> None:
         response = self.client.post(
             self.path,
             json=_snapshot_payload(),
             headers=self.headers,
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(get_db_connection, Mock)
-        get_db_connection.assert_called_once()
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"], "persistence_unavailable")
+
+    @patch("app.main.get_db_connection", return_value=object())
+    def test_snapshot_ingest_returns_503_for_invalid_db_connection_object(
+        self, _get_db_connection  # noqa: ANN001
+    ) -> None:
+        response = self.client.post(
+            self.path,
+            json=_snapshot_payload(),
+            headers=self.headers,
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"], "persistence_unavailable")
 
 
 if __name__ == "__main__":

@@ -1,8 +1,13 @@
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app, reset_account_snapshot_persistence_state
+from app.ingestion.persistence import (
+    AccountSnapshotPersistenceService,
+    InMemoryAccountSnapshotRepository,
+)
 from tests.helpers.auth_tokens import encode_test_token
 
 
@@ -36,12 +41,22 @@ def _snapshot(event_ts: str, source_account_id: str = "acct-1001") -> dict:
 class ApiAccountSnapshotPersistenceIntegrationContractTest(unittest.TestCase):
     def setUp(self) -> None:
         reset_account_snapshot_persistence_state()
+        repository = InMemoryAccountSnapshotRepository()
+        self.persistence_service = AccountSnapshotPersistenceService(repository)
+        self.persistence_service_patcher = patch(
+            "app.main._build_snapshot_persistence_service",
+            return_value=self.persistence_service,
+        )
+        self.persistence_service_patcher.start()
         self.client = TestClient(app)
         self.path = "/v1/accounts:snapshot"
         self.headers = {
             "Authorization": f"Bearer {_service_principal_token('tenant-a')}",
             "Content-Type": "application/json",
         }
+
+    def tearDown(self) -> None:
+        self.persistence_service_patcher.stop()
 
     def test_snapshot_ingest_returns_persistence_counts(self) -> None:
         payload = {"snapshots": [_snapshot("2026-03-05T14:32:10Z", source_account_id="acct-a")]}
