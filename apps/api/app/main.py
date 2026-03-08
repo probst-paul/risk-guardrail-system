@@ -58,9 +58,16 @@ def get_db_connection():
 def _build_snapshot_persistence_service() -> AccountSnapshotPersistenceService:
     connection = get_db_connection()
     if connection and hasattr(connection, "cursor") and hasattr(connection, "commit"):
+        on_close = connection.close if hasattr(connection, "close") else None
         return AccountSnapshotPersistenceService(
-            PostgresAccountSnapshotRepository(connection)
+            PostgresAccountSnapshotRepository(connection),
+            on_close=on_close,
         )
+    if connection and hasattr(connection, "close"):
+        try:
+            connection.close()
+        except Exception:  # noqa: BLE001
+            pass
     raise RuntimeError("persistence_unavailable")
 
 
@@ -135,7 +142,10 @@ def ingest_account_snapshots(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="persistence_unavailable",
         ) from None
-    persistence_result = persistence_service.persist_batch(canonical_snapshots)
+    try:
+        persistence_result = persistence_service.persist_batch(canonical_snapshots)
+    finally:
+        persistence_service.close()
 
     return {
         "status": "accepted",

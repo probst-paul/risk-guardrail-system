@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Protocol
+from typing import Callable, Iterable, Optional, Protocol
 
 from .account_models import CanonicalAccountSnapshot
 
@@ -25,8 +25,14 @@ class PersistenceResult:
 class AccountSnapshotPersistenceService:
     """Batch persistence coordinator with duplicate-safe accounting."""
 
-    def __init__(self, repository: AccountSnapshotRepository) -> None:
+    def __init__(
+        self,
+        repository: AccountSnapshotRepository,
+        *,
+        on_close: Optional[Callable[[], None]] = None,
+    ) -> None:
         self._repository = repository
+        self._on_close = on_close
 
     def persist_batch(
         self, snapshots: Iterable[CanonicalAccountSnapshot]
@@ -47,6 +53,11 @@ class AccountSnapshotPersistenceService:
             persisted_count=persisted_count,
             duplicate_count=duplicate_count,
         )
+
+    def close(self) -> None:
+        """Run optional cleanup for lifecycle-managed repository resources."""
+        if self._on_close is not None:
+            self._on_close()
 
 
 class InMemoryAccountSnapshotRepository:
