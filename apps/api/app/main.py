@@ -17,6 +17,9 @@ from app.ingestion.account_models import (
 )
 from app.ingestion.persistence import AccountSnapshotPersistenceService
 from app.ingestion.postgres_repository import PostgresAccountSnapshotRepository
+from app.risk.persistence import RiskStatePersistenceService
+from app.risk.postgres_repository import PostgresRiskStateRepository
+from app.risk.state_machine import evaluate_daily_risk_state
 
 app = FastAPI(
     title="Risk Guardrail API",
@@ -52,6 +55,27 @@ def _build_snapshot_persistence_service() -> AccountSnapshotPersistenceService:
         return AccountSnapshotPersistenceService(
             PostgresAccountSnapshotRepository(connection),
             on_close=on_close,
+        )
+    if connection and hasattr(connection, "close"):
+        try:
+            connection.close()
+        except Exception:  # noqa: BLE001
+            pass
+    raise PersistenceUnavailableError("persistence_unavailable")
+
+
+def _build_risk_persistence_services() -> tuple[
+    AccountSnapshotPersistenceService,
+    RiskStatePersistenceService,
+]:
+    connection = get_db_connection()
+    if connection and hasattr(connection, "cursor") and hasattr(connection, "commit"):
+        return (
+            AccountSnapshotPersistenceService(
+                PostgresAccountSnapshotRepository(connection),
+                on_close=connection.close if hasattr(connection, "close") else None,
+            ),
+            RiskStatePersistenceService(PostgresRiskStateRepository(connection)),
         )
     if connection and hasattr(connection, "close"):
         try:
@@ -144,4 +168,63 @@ def ingest_account_snapshots(
         "total_count": persistence_result.total_count,
         "persisted_count": persistence_result.persisted_count,
         "duplicate_count": persistence_result.duplicate_count,
+    }
+
+
+@app.post("/v1/risk:evaluate", tags=["ingestion"])
+def evaluate_risk(
+    payload: dict,
+    auth: AuthenticatedRequest = Depends(authenticate_request),
+) -> Dict[str, Union[str, int, bool, None, float]]:
+    """Evaluate account risk state from a canonical snapshot payload."""
+    enforce_required_roles(auth, required_roles=["service_principal"])
+
+    raw_snapshot = payload.get("snapshot")
+    if not isinstance(raw_snapshot, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_payload",
+        )
+
+    try:
+        snapshot = canonical_account_snapshot_from_dict(raw_snapshot)
+        enforce_tenant_scope(auth.identity, resource_tenant_id=snapshot.tenant_id)
+    except CanonicalAccountValidationError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_snapshot",
+        ) from None
+    except AuthorizationError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="forbidden",
+        ) from None
+
+    evaluation = evaluate_daily_risk_state(snapshot)
+
+    # Risk-state persistence is best-effort in this slice so API evaluation remains available
+    # outside full DB-backed environments.
+    try:
+        snapshot_service, risk_service = _build_risk_persistence_services()
+        try:
+            snapshot_service.persist_batch([snapshot])
+            risk_service.persist_if_new(snapshot=snapshot, evaluation=evaluation)
+        finally:
+            snapshot_service.close()
+    except PersistenceUnavailableError:
+        pass
+    except Exception:  # noqa: BLE001
+        # Risk evaluation remains available even when persistence linkage fails.
+        pass
+
+    loss_ratio = evaluation.get("loss_ratio")
+    serialized_loss_ratio = float(loss_ratio) if loss_ratio is not None else None
+
+    return {
+        "status": "evaluated",
+        "tenant_id": auth.effective_tenant_id,
+        "risk_status": str(evaluation["status"]),
+        "trading_locked": bool(evaluation["trading_locked"]),
+        "trading_day": str(evaluation["trading_day"]),
+        "loss_ratio": serialized_loss_ratio,
     }
