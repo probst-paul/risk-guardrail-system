@@ -19,6 +19,11 @@ The project follows TDD throughout. The current repository state establishes the
 - API snapshot persistence coverage includes:
   - lifecycle contract tests for DB connection cleanup
   - env-gated real Postgres integration tests that assert first-insert persistence, duplicate-safe re-ingest, and mixed-batch counts
+- Risk engine coverage includes:
+  - risk state-machine contract tests for active/warning/breached thresholds and session-based trading-day resets
+  - API risk-evaluation contract tests for auth, tenant scope, payload validation, and response shape
+  - regression tests for out-of-order events, duplicate events, cross-tenant isolation, and DB write failure tolerance
+  - PostgreSQL repository contract tests for risk-state idempotent writes and error bubbling
 
 ## Future direction
 

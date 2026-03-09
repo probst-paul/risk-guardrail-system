@@ -1,18 +1,17 @@
 # Risk Guardrail System
 
-Risk Guardrail System is a multi-tenant risk control plane for trading-style event streams. This repository starts with a backend-first Sprint 0 scaffold: a monorepo baseline, contract-first backend API definition, local Compose topology, and an initial docs pack.
+Risk Guardrail System is a multi-tenant risk control plane for trading-style event streams.
 
-## Scope of the first commit
+## Current implemented scope
 
-This scaffold covers the project plan's Sprint 0 goals:
+The repository now includes a working backend baseline for:
 
-- Repository skeleton for the backend API, contracts, tests, and docs
-- `docker-compose.yml` baseline for local development
-- OpenAPI contract-of-record baseline under `openapi/`
-- Lightweight contract test harness
-- Initial documentation pack and first ADR
-
-This commit does not implement tenancy, auth, ingestion, risk evaluation, or persistence yet. Those belong to later sprints.
+- JWT-based request auth and tenant/role guards
+- Canonical account snapshot ingestion with idempotent persistence semantics
+- Risk evaluation state machine (`active`, `warning`, `breached`) with trading-session day boundaries
+- Risk evaluation API endpoint and risk-state persistence linkage
+- Migration-managed PostgreSQL schema for tenancy, snapshot ingestion, and risk-state snapshots
+- Contract + unit + regression test coverage
 
 ## Repository layout
 
@@ -21,7 +20,10 @@ This commit does not implement tenancy, auth, ingestion, risk evaluation, or per
 ├── apps/
 │   ├── api/
 │   │   ├── app/
-│   │   │   └── connections/
+│   │   │   ├── connections/
+│   │   │   ├── ingestion/
+│   │   │   ├── auth/
+│   │   │   └── risk/
 │   │   ├── migrations/
 │   │   │   └── versions/
 │   │   ├── alembic.ini
@@ -42,15 +44,15 @@ This commit does not implement tenancy, auth, ingestion, risk evaluation, or per
 ├── scripts/
 │   └── check_openapi.py
 ├── tests/
-│   └── contracts/
-│       └── test_openapi_baseline.py
+│   ├── contracts/
+│   └── unit/
 ├── .env.example
 ├── .gitignore
 ├── Makefile
 └── docker-compose.yml
 ```
 
-## Planned architecture
+## Architecture
 
 - `apps/api`: FastAPI backend API, the system-of-record boundary for tenancy, ingestion, policy evaluation, and reporting
 - `apps/api/app/connections`: platform adapter boundary for Sierra Chart, Rithmic, NinjaTrader, simulator, or other external integrations
@@ -69,16 +71,18 @@ make test
 make db-upgrade
 ```
 
-### Service stubs
+### Local services
 
 ```bash
 docker compose up --build
 ```
 
-Expected endpoints after the scaffold:
+Expected local endpoints:
 
 - API health: `http://localhost:8000/health`
-- PostgreSQL: `localhost:5432`
+- Snapshot ingest: `http://localhost:8000/v1/accounts:snapshot`
+- Risk evaluate: `http://localhost:8000/v1/risk:evaluate`
+- PostgreSQL: `localhost:55432`
 
 ### Development notes
 
@@ -94,5 +98,5 @@ Implementation sequencing lives in [docs/roadmap.md](docs/roadmap.md).
 ## Current decisions
 
 - Monorepo layout to keep the backend app plus shared contracts and docs versioned together
-- OpenAPI checked in as the contract of record for the backend API before endpoint implementation expands
-- Service stubs are intentionally minimal to avoid pretending the system exists before the tenancy and data model work lands
+- OpenAPI checked in as the contract of record for backend endpoint behavior
+- TDD and contract-first sequencing for API and persistence slices

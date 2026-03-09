@@ -15,6 +15,7 @@ def main() -> None:
         "/health",
         "/v1/fills:ingest",
         "/v1/accounts:snapshot",
+        "/v1/risk:evaluate",
         "/v1/admin/accounts/{accountId}/unlock",
     ]
     missing = [path for path in required_paths if path not in spec.get("paths", {})]

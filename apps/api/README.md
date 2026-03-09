@@ -33,6 +33,23 @@ This directory contains the FastAPI control-plane backend.
 - `duplicate_count` counts rows rejected by the DB uniqueness constraint for the same idempotency key.
 - When DB persistence is unavailable, ingestion fails fast with `503` and `persistence_unavailable`.
 
+## Risk evaluation semantics (current scaffold)
+
+- `POST /v1/risk:evaluate` accepts authenticated service-principal payloads with a canonical account snapshot.
+- Response includes:
+  - `risk_status`: `active`, `warning`, or `breached`
+  - `trading_locked`: `true` only when `risk_status` is `breached`
+  - `loss_ratio`: `abs(min(daily_pnl, 0)) / daily_net_loss_limit` when a valid limit exists, otherwise `null`
+  - `trading_day`: session-derived trading date
+- Thresholds:
+  - warning when `loss_ratio >= 0.8`
+  - breached when `loss_ratio >= 1.0`
+- Trading-day policy default:
+  - timezone: `America/Chicago`
+  - session start: `17:00`
+- Risk-state persistence linkage is currently best-effort:
+  - evaluation response is returned even if risk-state DB linkage write fails
+
 ## Postgres integration test prerequisites
 
 - Start local Postgres: `docker compose up -d postgres`

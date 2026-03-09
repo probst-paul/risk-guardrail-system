@@ -98,6 +98,46 @@
         }
       }
     },
+    "/v1/risk:evaluate": {
+      "post": {
+        "tags": ["ingestion"],
+        "summary": "Evaluate risk state from account snapshot",
+        "operationId": "evaluateRisk",
+        "description": "Authenticated risk evaluation for a canonical account snapshot. Status thresholds: warning at loss_ratio >= 0.8 and breached at loss_ratio >= 1.0. Trading-day boundary defaults to America/Chicago at 17:00. Persistence linkage to snapshot/risk tables is best-effort in this slice.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskEvaluationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Risk evaluation completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskEvaluationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload or invalid canonical snapshot"
+          },
+          "401": {
+            "description": "Missing or invalid authentication token"
+          },
+          "403": {
+            "description": "Tenant scope violation or insufficient permissions"
+          }
+        }
+      }
+    },
     "/v1/admin/accounts/{accountId}/unlock": {
       "post": {
         "tags": ["admin"],
@@ -184,6 +224,70 @@
           "duplicate_count": {
             "type": "integer",
             "minimum": 0
+          }
+        }
+      },
+      "RiskEvaluationRequest": {
+        "type": "object",
+        "required": ["snapshot"],
+        "properties": {
+          "snapshot": {
+            "type": "object",
+            "required": [
+              "tenant_id",
+              "connector_id",
+              "source_account_id",
+              "event_ts",
+              "current_balance",
+              "daily_pnl",
+              "account_currency",
+              "trading_is_disabled"
+            ],
+            "properties": {
+              "tenant_id": { "type": "string" },
+              "connector_id": { "type": "string" },
+              "source_account_id": { "type": "string" },
+              "event_ts": { "type": "string", "format": "date-time" },
+              "current_balance": { "type": "string" },
+              "daily_pnl": { "type": "string" },
+              "daily_net_loss_limit": { "type": "string" },
+              "account_currency": { "type": "string" },
+              "trading_is_disabled": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "RiskEvaluationResponse": {
+        "type": "object",
+        "required": [
+          "status",
+          "tenant_id",
+          "risk_status",
+          "trading_locked",
+          "trading_day",
+          "loss_ratio"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["evaluated"]
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "risk_status": {
+            "type": "string",
+            "enum": ["active", "warning", "breached"]
+          },
+          "trading_locked": {
+            "type": "boolean"
+          },
+          "trading_day": {
+            "type": "string",
+            "format": "date"
+          },
+          "loss_ratio": {
+            "type": ["number", "null"]
           }
         }
       }

@@ -14,7 +14,9 @@ Initial component boundaries:
 
 1. A future connector service polls external platform endpoints and converts platform-native payloads into canonical events.
 2. The backend API ingests canonical events, persists immutable records, and computes derived risk state.
-3. Operators use future admin/reporting endpoints and the eventual Web Admin to inspect and act on tenant-scoped state.
+3. Risk evaluation currently runs through `POST /v1/risk:evaluate`, applying threshold-based state transitions and trading-session boundaries.
+4. Risk-state snapshots are linked to source snapshot keys in PostgreSQL with idempotent constraints; linkage writes are currently best-effort in this slice.
+5. Operators use future admin/reporting endpoints and the eventual Web Admin to inspect and act on tenant-scoped state.
 
 ## Early constraints
 

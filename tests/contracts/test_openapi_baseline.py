@@ -19,6 +19,7 @@ class OpenApiBaselineTest(unittest.TestCase):
         self.assertIn("/health", paths)
         self.assertIn("/v1/fills:ingest", paths)
         self.assertIn("/v1/accounts:snapshot", paths)
+        self.assertIn("/v1/risk:evaluate", paths)
         self.assertIn("/v1/admin/accounts/{accountId}/unlock", paths)
 
     def test_health_response_schema_is_present(self) -> None:
@@ -39,11 +40,13 @@ class OpenApiBaselineTest(unittest.TestCase):
     def test_protected_paths_require_bearer_auth(self) -> None:
         ingest_security = self.spec["paths"]["/v1/fills:ingest"]["post"]["security"]
         snapshot_security = self.spec["paths"]["/v1/accounts:snapshot"]["post"]["security"]
+        risk_security = self.spec["paths"]["/v1/risk:evaluate"]["post"]["security"]
         unlock_security = self.spec["paths"]["/v1/admin/accounts/{accountId}/unlock"]["post"][
             "security"
         ]
         self.assertEqual(ingest_security, [{"bearerAuth": []}])
         self.assertEqual(snapshot_security, [{"bearerAuth": []}])
+        self.assertEqual(risk_security, [{"bearerAuth": []}])
         self.assertEqual(unlock_security, [{"bearerAuth": []}])
 
     def test_account_snapshot_ingest_response_schema_is_present(self) -> None:
@@ -65,6 +68,21 @@ class OpenApiBaselineTest(unittest.TestCase):
         responses = self.spec["paths"]["/v1/accounts:snapshot"]["post"]["responses"]
         self.assertIn("503", responses)
         self.assertIn("persistence", responses["503"]["description"].lower())
+
+    def test_risk_evaluation_response_schema_is_present(self) -> None:
+        schema = self.spec["components"]["schemas"]["RiskEvaluationResponse"]
+        self.assertEqual(schema["type"], "object")
+        self.assertEqual(
+            schema["required"],
+            [
+                "status",
+                "tenant_id",
+                "risk_status",
+                "trading_locked",
+                "trading_day",
+                "loss_ratio",
+            ],
+        )
 
 
 if __name__ == "__main__":
