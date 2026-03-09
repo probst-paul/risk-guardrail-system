@@ -16,6 +16,9 @@ The project follows TDD throughout. The current repository state establishes the
 - The contract test harness asserts the OpenAPI version and required placeholder paths.
 - The harness should expand over time to check request and response shape against implemented handlers.
 - Persistence-service unit tests currently lock in exception bubbling from repository errors; API-layer translation is handled separately.
+- API snapshot persistence coverage includes:
+  - lifecycle contract tests for DB connection cleanup
+  - env-gated real Postgres integration tests that assert first-insert persistence, duplicate-safe re-ingest, and mixed-batch counts
 
 ## Future direction
 

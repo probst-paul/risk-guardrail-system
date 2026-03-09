@@ -23,8 +23,25 @@ This directory contains the FastAPI control-plane backend.
 
 - `POST /v1/accounts:snapshot` accepts authenticated service-principal payloads.
 - Response includes `total_count`, `persisted_count`, and `duplicate_count`.
-- Snapshot ingestion now attempts PostgreSQL-backed persistence wiring via runtime DB connection.
+- Snapshot ingestion uses PostgreSQL-backed persistence with DB-authoritative duplicate detection.
+- Idempotency key is the unique tuple:
+  - `tenant_id`
+  - `connector_id`
+  - `source_account_id`
+  - `event_ts`
+- `persisted_count` counts rows newly inserted in the batch.
+- `duplicate_count` counts rows rejected by the DB uniqueness constraint for the same idempotency key.
 - When DB persistence is unavailable, ingestion fails fast with `503` and `persistence_unavailable`.
+
+## Postgres integration test prerequisites
+
+- Start local Postgres: `docker compose up -d postgres`
+- Set `DATABASE_URL` for host execution:
+  - `postgresql://risk_guardrail:risk_guardrail@localhost:55432/risk_guardrail`
+- Apply migrations from `apps/api`:
+  - `python -m alembic -c alembic.ini upgrade head`
+- Run env-gated DB integration tests from repo root:
+  - `PYTHONPATH=apps/api python -m unittest tests.unit.test_api_account_snapshot_postgres_integration_contract`
 
 ## Database migrations
 
