@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from app.main import app, reset_account_snapshot_persistence_state
+from app.main import app
 from app.ingestion.persistence import (
     AccountSnapshotPersistenceService,
     InMemoryAccountSnapshotRepository,
@@ -40,7 +40,6 @@ def _snapshot(event_ts: str, source_account_id: str = "acct-1001") -> dict:
 
 class ApiAccountSnapshotPersistenceIntegrationContractTest(unittest.TestCase):
     def setUp(self) -> None:
-        reset_account_snapshot_persistence_state()
         repository = InMemoryAccountSnapshotRepository()
         self.persistence_service = AccountSnapshotPersistenceService(repository)
         self.persistence_service_patcher = patch(

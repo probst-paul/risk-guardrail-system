@@ -15,10 +15,7 @@ from app.ingestion.account_models import (
     CanonicalAccountValidationError,
     canonical_account_snapshot_from_dict,
 )
-from app.ingestion.persistence import (
-    AccountSnapshotPersistenceService,
-    InMemoryAccountSnapshotRepository,
-)
+from app.ingestion.persistence import AccountSnapshotPersistenceService
 from app.ingestion.postgres_repository import PostgresAccountSnapshotRepository
 
 app = FastAPI(
@@ -27,15 +24,8 @@ app = FastAPI(
     description="Sprint 0 scaffold for the Risk Guardrail System backend.",
 )
 
-_account_snapshot_repository = InMemoryAccountSnapshotRepository()
-_account_snapshot_persistence_service = AccountSnapshotPersistenceService(
-    _account_snapshot_repository
-)
-
-
-def reset_account_snapshot_persistence_state() -> None:
-    """Reset in-memory snapshot persistence state (test helper)."""
-    _account_snapshot_repository.clear()
+class PersistenceUnavailableError(RuntimeError):
+    """Raised when snapshot persistence cannot acquire a usable DB dependency."""
 
 
 def get_db_connection():
@@ -68,7 +58,7 @@ def _build_snapshot_persistence_service() -> AccountSnapshotPersistenceService:
             connection.close()
         except Exception:  # noqa: BLE001
             pass
-    raise RuntimeError("persistence_unavailable")
+    raise PersistenceUnavailableError("persistence_unavailable")
 
 
 @app.get("/health", tags=["system"])
@@ -137,7 +127,7 @@ def ingest_account_snapshots(
 
     try:
         persistence_service = _build_snapshot_persistence_service()
-    except RuntimeError:
+    except PersistenceUnavailableError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="persistence_unavailable",
